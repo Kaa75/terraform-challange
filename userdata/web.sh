@@ -2,8 +2,12 @@
 yum update -y
 yum install -y nginx
 
+# Variables injected by Terraform
+STUDENT_NAME="__STUDENT_NAME__"
+BACKEND_URL="__BACKEND_URL__"
+
 # ─── Create the frontend HTML ───
-cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
+cat > /usr/share/nginx/html/index.html << HTMLEOF
 <!DOCTYPE html>
 <html>
 	<head>
@@ -53,8 +57,7 @@ cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
 	</head>
 	<body>
 		<div class="container">
-			<!-- CHANGE THE NAME BELOW TO YOUR FULL NAME -->
-			<h1>Two-Tier App &mdash; Karim Abboud</h1>
+			<h1>Two-Tier App &mdash; $STUDENT_NAME</h1>
 			<p class="subtitle">Web Tier &rarr; Nginx Reverse Proxy &rarr; Backend API</p>
 
 			<div class="card">
@@ -72,13 +75,13 @@ cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
 			fetch("/api/health")
 				.then(r => r.json())
 				.then(d => {
-					document.getElementById("health").innerHTML = `
-						<span class="status healthy">${d.status}</span>
-						<div class="meta">
-							Instance: ${d.instanceId}<br>
-							AZ: ${d.availabilityZone}<br>
-							Time: ${d.timestamp}
-						</div>`;
+					document.getElementById("health").innerHTML =
+						'<span class="status healthy">' + d.status + '</span>' +
+						'<div class="meta">' +
+							'Instance: ' + d.instanceId + '<br>' +
+							'AZ: ' + d.availabilityZone + '<br>' +
+							'Time: ' + d.timestamp +
+						'</div>';
 				})
 				.catch(() => {
 					document.getElementById("health").innerHTML =
@@ -89,16 +92,16 @@ cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
 				.then(r => r.json())
 				.then(d => {
 					let rows = d.items.map(i =>
-						`<tr><td>${i.id}</td><td>${i.name}</td><td>${i.description}</td></tr>`
+						'<tr><td>' + i.id + '</td><td>' + i.name + '</td><td>' + i.description + '</td></tr>'
 					).join("");
 
-					document.getElementById("data").innerHTML = `
-						<p>${d.message}</p>
-						<div class="meta">Instance: ${d.instanceId} | AZ: ${d.availabilityZone}</div>
-						<table>
-							<tr><th>ID</th><th>Name</th><th>Description</th></tr>
-							${rows}
-						</table>`;
+					document.getElementById("data").innerHTML =
+						'<p>' + d.message + '</p>' +
+						'<div class="meta">Instance: ' + d.instanceId + ' | AZ: ' + d.availabilityZone + '</div>' +
+						'<table>' +
+							'<tr><th>ID</th><th>Name</th><th>Description</th></tr>' +
+							rows +
+						'</table>';
 				})
 				.catch(() => {
 					document.getElementById("data").innerHTML =
@@ -110,8 +113,8 @@ cat > /usr/share/nginx/html/index.html << 'HTMLEOF'
 HTMLEOF
 
 # ─── Configure Nginx reverse proxy ───
-# Replace BACKEND_IP below with one of your backend instance's private IP
-cat > /etc/nginx/conf.d/reverse-proxy.conf << 'NGINXEOF'
+# Using Internal ALB DNS name for production-grade two-tier architecture
+cat > /etc/nginx/conf.d/reverse-proxy.conf << NGINXEOF
 server {
 	listen 80;
 	server_name _;
@@ -119,14 +122,14 @@ server {
 	index index.html;
 
 	location / {
-		try_files $uri $uri/ =404;
+		try_files \$uri \$uri/ =404;
 	}
 
 	location /api/ {
-		proxy_pass http://BACKEND_IP:3000;
-		proxy_set_header Host $host;
-		proxy_set_header X-Real-IP $remote_addr;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_pass http://$BACKEND_URL/api/;
+		proxy_set_header Host \$host;
+		proxy_set_header X-Real-IP \$remote_addr;
+		proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 	}
 }
 NGINXEOF

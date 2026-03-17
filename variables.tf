@@ -1,33 +1,58 @@
+# ─── AWS Region ───
 variable "aws_region" {
-description = "AWS region to deploy resources"
-type = string
-default = "us-east-1"
+  description = "AWS region to deploy resources"
+  type        = string
+  default     = "us-east-1"
 }
+
+# ─── VPC CIDR (NOT 10.0.0.0/16 as required by lab) ───
 variable "vpc_cidr" {
-description = "CIDR block for the VPC"
-type = string
-default = "10.0.0.0/16"
+  description = "CIDR block for the VPC"
+  type        = string
+  default     = "172.16.0.0/16"
 }
-variable "public_subnet_cidr" {
-description = "CIDR block for the public subnet"
-type = string
-default = "10.0.1.0/24"
+
+# ─── Public Subnets ───
+variable "public_subnet_cidr_1" {
+  description = "CIDR block for public subnet 1"
+  type        = string
+  default     = "172.16.1.0/24"
 }
-variable "private_subnet_cidr" {
-description = "CIDR block for the private subnet"
-type = string
-default = "10.0.2.0/24"
-}
+
 variable "public_subnet_cidr_2" {
-description = "CIDR block for second public subnet (ALB needs 2 AZs)"
-type = string
-default = "10.0.3.0/24"
+  description = "CIDR block for public subnet 2"
+  type        = string
+  default     = "172.16.2.0/24"
 }
+
+# ─── Private Subnets ───
+variable "private_subnet_cidr_1" {
+  description = "CIDR block for private subnet 1"
+  type        = string
+  default     = "172.16.10.0/24"
+}
+
+variable "private_subnet_cidr_2" {
+  description = "CIDR block for private subnet 2"
+  type        = string
+  default     = "172.16.11.0/24"
+}
+
+# ─── Instance Configuration ───
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t2.micro"
+}
+
 variable "key_name" {
-description = "Name of the SSH key pair"
-type = string
+  description = "Name of the SSH key pair"
+  type        = string
 }
-variable "my_ip" {
-description = "Your public IP for SSH access (e.g., 203.0.113.50/32)"
-type = string
+
+# ─── Student Name ───
+variable "student_name" {
+  description = "Your full name for display on web pages"
+  type        = string
+  default     = "Karim Abboud"
 }

@@ -1,41 +1,85 @@
-# ─── Application Load Balancer ───
-resource "aws_lb" "web" {
-name = "Lab-ALB"
-internal = false
-load_balancer_type = "application"
-security_groups = [aws_security_group.alb.id]
-subnets = [aws_subnet.public_1.id, aws_subnet.public_2.id]
-tags = { Name = "Lab-ALB" }
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXTERNAL ALB (Internet-facing) - Web Tier
+# ═══════════════════════════════════════════════════════════════════════════════
+
+resource "aws_lb" "external" {
+  name               = "Lab-External-ALB"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+
+  tags = { Name = "Lab-External-ALB" }
 }
-# ─── Target Group ───
+
 resource "aws_lb_target_group" "web" {
-name = "Lab-TG"
-port = 80
-protocol = "HTTP"
-vpc_id = aws_vpc.main.id
-health_check {
-path = "/"
-protocol = "HTTP"
-healthy_threshold = 2
-unhealthy_threshold = 2
-timeout = 5
-interval = 10
+  name     = "Lab-Web-TG"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 10
+  }
+
+  tags = { Name = "Lab-Web-TG" }
 }
-tags = { Name = "Lab-TG" }
+
+resource "aws_lb_listener" "external" {
+  load_balancer_arn = aws_lb.external.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
 }
-# ─── Register the web server with the target group ───
-resource "aws_lb_target_group_attachment" "web" {
-target_group_arn = aws_lb_target_group.web.arn
-target_id = aws_instance.web.id
-port = 80
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INTERNAL ALB (Private) - Backend Tier (BONUS)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+resource "aws_lb" "internal" {
+  name               = "Lab-Internal-ALB"
+  internal           = true
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.internal_alb.id]
+  subnets            = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+
+  tags = { Name = "Lab-Internal-ALB" }
 }
-# ─── Listener ───
-resource "aws_lb_listener" "web" {
-load_balancer_arn = aws_lb.web.arn
-port = 80 
-protocol = "HTTP"                                                             
-default_action {
-type = "forward"
-target_group_arn = aws_lb_target_group.web.arn
+
+resource "aws_lb_target_group" "backend" {
+  name     = "Lab-Backend-TG"
+  port     = 3000
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    path                = "/api/health"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 10
+  }
+
+  tags = { Name = "Lab-Backend-TG" }
 }
+
+resource "aws_lb_listener" "internal" {
+  load_balancer_arn = aws_lb.internal.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend.arn
+  }
 }
